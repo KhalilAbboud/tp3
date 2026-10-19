@@ -24,7 +24,7 @@ def show_image(img, title="Image"):
 
 def analyze_histogram(img, title = "Analyse de l'image"):
     """Affiche les statistiques basiques et l'histogramme de l'image."""
-    print(f"--- Analyse Statistiques ---")
+    print(f"--- Analyse Statistiques de {title} ---")
     print(f"Min: {img.min()}, Max: {img.max()}, Moyenne: {img.mean():.2f}")
 
     plt.figure(figsize=(10, 4))
@@ -106,8 +106,102 @@ Résultat et qu'il Harmonise le contraste entre plusieurs mammographies d'appare
 
 
 #partie 3: reduction du bruit
+def add_gaussian_noise(img, mean=0, sigma=25, seed=42):
+    """Ajoute un bruit gaussien à l'image."""
+    np.random.seed(seed)
+    gauss = np.random.normal(mean, sigma, img.shape)
+    noisy = img.astype(np.float32) + gauss
+    return np.clip(noisy, 0, 255).astype(np.uint8)
+
+def add_salt_and_pepper_noise(img, amount=0.05, seed=42):
+    """Ajoute un bruit impulsionnel (sel et poivre)."""
+    np.random.seed(seed)
+    noisy = img.copy()
+    num_salt = np.ceil(amount * img.size * 0.5)
+    num_pepper = np.ceil(amount * img.size * 0.5)
+
+    # Sel (pixels blancs)
+    coords = [
+        np.random.randint(0, i - 1, int(num_salt)) for i in img.shape
+    ]  #
+    noisy[tuple(coords)] = 255
+
+    # Poivre (pixels noirs)
+    coords = [
+        np.random.randint(0, i - 1, int(num_pepper)) for i in img.shape
+    ]  #
+    noisy[tuple(coords)] = 0
+    return noisy
 
 
+def mean_filter(img, ksize=3):
+    """Filtre moyenneur fait maison."""
+    pad = ksize // 2
+    padded = np.pad(img, pad, mode="reflect")
+    output = np.zeros_like(img, dtype=np.float32)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded[i : i + ksize, j : j + ksize]
+            output[i, j] = np.mean(region)
+    return output.astype(np.uint8)
+
+
+def gaussian_filter(img, ksize=3, sigma=1.0):
+    """Filtre gaussien fait maison."""
+    pad = ksize // 2
+    ax = np.linspace(-(ksize // 2), ksize // 2, ksize)
+    gauss = np.exp(-0.5 * np.square(ax) / np.square(sigma))
+    kernel = np.outer(gauss, gauss)
+    kernel /= kernel.sum()
+
+    padded = np.pad(img, pad, mode="reflect")
+    output = np.zeros_like(img, dtype=np.float32)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded[i : i + ksize, j : j + ksize]
+            output[i, j] = np.sum(region * kernel)
+    return output.astype(np.uint8)
+
+
+def median_filter(img, ksize=3):
+    """Filtre médian fait maison."""
+    pad = ksize // 2
+    padded = np.pad(img, pad, mode="reflect")
+    output = np.zeros_like(img, dtype=np.uint8)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded[i : i + ksize, j : j + ksize]
+            output[i, j] = np.median(region)
+    return output
+
+"""
+filter mode:
+[0,0,0,0
+0,255,0,0
+0,0,0,0
+0,0,0,0] 
+transforms to
+[28.33,28.33,28.33,0
+28.33,28.33,28.33,0
+28.33,28.33,28.33,0
+0,0,0,0]
+
+filter guassian:
+[15.94,31.88,15.94,0
+31.88,63.75,31.88,0
+15.94,31.88,15.94,0
+0,0,0,0]
+"""
+
+#partie 4: binarisation de l'image
+
+def binarize_image(img, threshold):
+    """Binarisation de l'image selon un seuil donné."""
+    binary = np.where(img >= threshold, 255, 0).astype(np.uint8)
+    return binary
 
 """===================================================================================================="""
 
@@ -122,5 +216,18 @@ equalized_img = histogram_equalization(img)
 analyze_histogram(equalized_img, title="Image après Égalisation d'Histograme")
 specified_img = histogram_specification(img, dynamic_img)
 analyze_histogram(specified_img, title="Image après Spécification d'Histograme")
+
+
+# partie 3 resultats
+guassian_noisy_img = add_gaussian_noise(img)
+analyze_histogram(guassian_noisy_img, title="Image avec Bruit Gaussien")
+salt_pepper_noisy_img = add_salt_and_pepper_noise(img)
+analyze_histogram(salt_pepper_noisy_img, title="Image avec Bruit Sel et Poivre")
+mean_filtered_img = mean_filter(guassian_noisy_img)
+analyze_histogram(mean_filtered_img, title="Image après Filtre Moyenneur")
+guassian_filtered_img = gaussian_filter(guassian_noisy_img)
+analyze_histogram(guassian_filtered_img, title="Image après Filtre Gaussien")
+median_filtered_img = median_filter(salt_pepper_noisy_img)
+analyze_histogram(median_filtered_img, title="Image après Filtre Médian")
 
 
