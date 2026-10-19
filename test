@@ -1,0 +1,35 @@
+def show_image(img, title="Image", save_name=None):
+    # Calcul des statistiques de base des niveaux de gris
+    min_val = int(np.min(img))
+    max_val = int(np.max(img))
+    mean_val = float(np.mean(img))
+    
+    print(f"--- Statistiques [{title}] ---")
+    print(f"Valeur Min : {min_val} | Valeur Max : {max_val} | Moyenne : {mean_val:.2f}\n")
+    
+    # Création d'une figure à deux sous-graphiques (Image + Histogramme)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    
+    # 1. Affichage de l'image (vmin=0 et vmax=255 garantissent le respect de la vraie dynamique)
+    axes[0].imshow(img, cmap='gray', vmin=0, vmax=255)
+    axes[0].set_title(f"{title}\nMin: {min_val} | Max: {max_val} | Moy: {mean_val:.1f}")
+    axes[0].axis('off')
+    
+    # 2. Tracé de l'histogramme sur les 256 niveaux de gris possibles
+    axes[1].hist(img.ravel(), bins=256, range=(0, 256), color='black', alpha=0.8)
+    axes[1].set_title(f"Histogramme - {title}")
+    axes[1].set_xlabel("Niveaux de gris (0 = Noir, 255 = Blanc)")
+    axes[1].set_ylabel("Nombre de pixels")
+    axes[1].set_xlim([0, 255])
+    axes[1].grid(True, linestyle='--', alpha=0.5)
+    
+    plt.tight_layout()
+    
+    # Sauvegarde automatique dans le dossier images_resultats/
+    if save_name:
+        plt.savefig(os.path.join(OUTPUT_DIR, save_name), dpi=150)
+    plt.show()
+
+# Exécution de la Partie 1
+img_orig = load_image(IMAGE_PATH)
+show_image(img_orig, title="Mammographie Originale", save_name="01_originale.png")
