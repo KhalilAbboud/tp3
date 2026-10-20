@@ -1,12 +1,20 @@
 import os
 import heapq
+import re
 from collections import Counter
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-OUTPUT_DIR = "image_resultat"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "image_resultat")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+def result_filename(title, suffix):
+    """Construit un nom de fichier sûr et distinct pour chaque résultat."""
+    name = re.sub(r"[^A-Za-z0-9_-]+", "_", title).strip("_").lower()
+    return os.path.join(OUTPUT_DIR, f"{name}_{suffix}.png")
 
 # partie 1: chargement et analyse de l'image
 def load_image(filename):
@@ -39,7 +47,7 @@ def analyze_histogram(img, title = "Analyse de l'image"):
     plt.xlabel(f"Niveaux de gris \nMin: {img.min()} | Max: {img.max()} | Moy: {img.mean():.1f}")
     plt.ylabel("Fréquence")
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "partie1_histogramme.png"))
+    plt.savefig(result_filename(title, "histogramme"))
     plt.show()
 
 
@@ -177,24 +185,38 @@ def median_filter(img, ksize=3):
             output[i, j] = np.median(region)
     return output
 
-"""
-filter mode:
-[0,0,0,0
-0,255,0,0
-0,0,0,0
-0,0,0,0] 
-transforms to
-[28.33,28.33,28.33,0
-28.33,28.33,28.33,0
-28.33,28.33,28.33,0
-0,0,0,0]
+filter_example = np.zeros((4, 4), dtype=np.uint8)
+filter_example[1, 1] = 255
+filter_size = 3
+filter_pad = filter_size // 2
+mean_kernel = np.ones((filter_size, filter_size), dtype=np.float32) / (filter_size**2)
+gaussian_axis = np.linspace(-(filter_size // 2), filter_size // 2, filter_size)
+gaussian_axis = np.exp(-0.5 * np.square(gaussian_axis))
+gaussian_kernel = np.outer(gaussian_axis, gaussian_axis)
+gaussian_kernel /= gaussian_kernel.sum()
 
-filter guassian:
-[15.94,31.88,15.94,0
-31.88,63.75,31.88,0
-15.94,31.88,15.94,0
-0,0,0,0]
-"""
+print("Matrice d'entrée :")
+print(filter_example)
+for padding_mode, padding_label in (("constant", "zéros"), ("reflect", "réflexion")):
+    if padding_mode == "constant":
+        padded_example = np.pad(
+            filter_example, filter_pad, mode="constant", constant_values=0
+        )
+    else:
+        padded_example = np.pad(filter_example, filter_pad, mode="reflect")
+
+    windows = np.lib.stride_tricks.sliding_window_view(
+        padded_example, (filter_size, filter_size)
+    )
+    mean_result = windows.mean(axis=(-2, -1)).astype(np.uint8)
+    gaussian_result = (windows * gaussian_kernel).sum(axis=(-2, -1)).astype(np.uint8)
+
+    print(f"\nMatrice avec padding par {padding_label} :")
+    print(padded_example)
+    print(f"Résultat du filtre moyenneur | padding par {padding_label} :")
+    print(mean_result)
+    print(f"Résultat du filtre gaussien | padding par {padding_label} :")
+    print(gaussian_result)
 
 #partie 4: binarisation de l'image
 def binarize_image(img, threshold):
@@ -421,7 +443,7 @@ psnr_value = psnr(img, equalized_img)
 
 #partie 7 results:
 cached_image = apply_clahe(img)
-analyze_histogram()
+analyze_histogram(cached_image, title="Image après CLAHE")
 
 
 #partie 8 results:
