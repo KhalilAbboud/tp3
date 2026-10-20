@@ -286,6 +286,22 @@ analyze_histogram(median_filtered_img, title="Image après Filtre Médian")
 # partie 4 results
 binarized_img = binarize_image(equalized_img, threshold=128)
 analyze_histogram(binarized_img, title="Image après Binarisation")
+erosion_kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+eroded_img = erosion(binarized_img, erosion_kernel)
+analyze_histogram(eroded_img, title="Image après Érosion")
+dilated_img = dilation(binarized_img, erosion_kernel)
+analyze_histogram(dilated_img, title="Image après Dilatation")
+
+opened_img = opening(binarized_img, erosion_kernel)
+analyze_histogram(opened_img, title="Image après Ouverture")
+closed_img = closing(binarized_img, erosion_kernel)
+analyze_histogram(closed_img, title="Image après Fermeture")
+
+
+
+#partie5 results:
+
+
 
 
 
