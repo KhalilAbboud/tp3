@@ -289,7 +289,10 @@ def psnr(img1, img2):
 
 
 #partie 7: egalisation captive local
-
+def apply_clahe(img, clip_limit=2.0, tile_grid_size=(8, 8)):
+    """Applique l'égalisation d'histogramme adaptative limitée en contraste (CLAHE)."""
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+    return clahe.apply(img)
 
 
 
@@ -352,3 +355,5 @@ psnr_value = psnr(img, equalized_img)
 
 
 #partie 7 results:
+cached_image = apply_clahe(img)
+analyze_histogram()
