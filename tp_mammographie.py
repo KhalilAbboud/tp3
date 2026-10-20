@@ -203,13 +203,65 @@ def binarize_image(img, threshold):
     binary = np.where(img >= threshold, 255, 0).astype(np.uint8)
     return binary
 
+def erosion(img, kernel):
+    """Érosion morphologique."""
+    k_h, k_w = kernel.shape
+    pad_h, pad_w = k_h // 2, k_w // 2
+    padded = np.pad(
+        img,
+        ((pad_h, pad_h), (pad_w, pad_w)),
+        mode="constant",
+        constant_values=0,
+    )
+    output = np.zeros_like(img)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded[i : i + k_h, j : j + k_w]
+            if np.all(region[kernel == 1] == 255):
+                output[i, j] = 255
+    return output
+
+def dilation(img, kernel):
+    """Dilatation morphologique."""
+    k_h, k_w = kernel.shape
+    pad_h, pad_w = k_h // 2, k_w // 2
+    padded = np.pad(
+        img,
+        ((pad_h, pad_h), (pad_w, pad_w)),
+        mode="constant",
+        constant_values=0,
+    )
+    output = np.zeros_like(img)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded[i : i + k_h, j : j + k_w]
+            if np.any(region[kernel == 1] == 255):
+                output[i, j] = 255
+    return output
+
+def opening(img, kernel):
+    """Ouverture morphologique (Érosion puis Dilatation)."""
+    return dilation(erosion(img, kernel), kernel)
+
+
+def closing(img, kernel):
+    """Fermeture morphologique (Dilatation puis Érosion)."""
+    return erosion(dilation(img, kernel), kernel)
+
+#partie 5:
+
+
+
+
 """===================================================================================================="""
 
 
 img = load_image("mammogram.png")
 analyze_histogram(img)
 
-
+# partie 2 resultat
 dynamic_img = dynamic_expansion(img)
 analyze_histogram(dynamic_img, title="Image après Expansion de Dynamique")
 equalized_img = histogram_equalization(img)
@@ -229,5 +281,11 @@ guassian_filtered_img = gaussian_filter(guassian_noisy_img)
 analyze_histogram(guassian_filtered_img, title="Image après Filtre Gaussien")
 median_filtered_img = median_filter(salt_pepper_noisy_img)
 analyze_histogram(median_filtered_img, title="Image après Filtre Médian")
+
+
+# partie 4 results
+binarized_img = binarize_image(equalized_img, threshold=128)
+analyze_histogram(binarized_img, title="Image après Binarisation")
+
 
 
