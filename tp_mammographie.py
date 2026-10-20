@@ -295,6 +295,72 @@ def apply_clahe(img, clip_limit=2.0, tile_grid_size=(8, 8)):
     return clahe.apply(img)
 
 
+#partie 8; cmpression sans perte
+import heapq
+from collections import Counter
+
+
+class Node:
+
+    def __init__(self, symbol=None, freq=0, left=None, right=None):
+        self.symbol = symbol
+        self.freq = freq
+        self.left = left
+        self.right = right
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+
+def build_huffman_tree(frequencies):
+    """Construit l'arbre de Huffman à partir des fréquences des symboles."""
+    heap = [Node(sym, freq) for sym, freq in frequencies.items()]
+    heapq.heapify(heap)
+
+    while len(heap) > 1:
+        node1 = heapq.heappop(heap)
+        node2 = heapq.heappop(heap)
+        merged = Node(freq=node1.freq + node2.freq, left=node1, right=node2)
+        heapq.heappush(heap, merged)
+
+    return heap[0] if heap else None
+
+
+def generate_huffman_codes(root, current_code="", codes=None):
+    """Génère les codes binaires pour chaque niveau de gris."""
+    if codes is None:
+        codes = {}
+    if root is not None:
+        if root.symbol is not None:
+            codes[root.symbol] = current_code or "0"
+        generate_huffman_codes(root.left, current_code + "0", codes)
+        generate_huffman_codes(root.right, current_code + "1", codes)
+    return codes
+
+
+def huffman_encoding(img):
+    """Effectue l'encodage de Huffman et calcule la longueur moyenne des codes."""
+    flat_img = img.flatten()
+    total_pixels = len(flat_img)
+    if total_pixels == 0:
+        raise ValueError("Cannot encode an empty image.")
+    freqs = Counter(flat_img)
+
+    # 1. Construction de l'arbre et des codes
+    root = build_huffman_tree(freqs)
+    codes = generate_huffman_codes(root)
+
+    # 2. Encodage
+    encoded_bits = "".join(codes[pixel] for pixel in flat_img)
+
+    # 3. Calcul de la longueur moyenne L_moy
+    avg_len = sum(
+        (freq / total_pixels) * len(codes[sym]) for sym, freq in freqs.items()
+    )
+
+    return encoded_bits, codes, avg_len
+
+
 
 """===================================================================================================="""
 
@@ -332,7 +398,6 @@ eroded_img = erosion(binarized_img, erosion_kernel)
 analyze_histogram(eroded_img, title="Image après Érosion")
 dilated_img = dilation(binarized_img, erosion_kernel)
 analyze_histogram(dilated_img, title="Image après Dilatation")
-
 opened_img = opening(binarized_img, erosion_kernel)
 analyze_histogram(opened_img, title="Image après Ouverture")
 closed_img = closing(binarized_img, erosion_kernel)
@@ -357,3 +422,66 @@ psnr_value = psnr(img, equalized_img)
 #partie 7 results:
 cached_image = apply_clahe(img)
 analyze_histogram()
+
+
+#partie 8 results:
+encoded_bits, huffman_codes, average_code_length = huffman_encoding(img)
+print("--- Encodage de Huffman ---")
+print(f"Nombre de pixels : {img.size}")
+print(f"Nombre de niveaux de gris : {len(huffman_codes)}")
+print(f"Longueur moyenne : {average_code_length:.2f} bits/pixel")
+print(f"Taille encodée : {len(encoded_bits)} bits")
+print(f"Taille initiale : {img.size * 8} bits")
+
+
+"""
+Partie 9:
+================================================================================
+PARTIE 9 : DISCUSSION ET CONCLUSION
+================================================================================
+
+OBJECTIF :
+Évaluer globalement les résultats obtenus et proposer une chaîne de traitement
+(pipeline) optimale pour la détection automatique d'anomalies sur les mammographies.
+
+--------------------------------------------------------------------------------
+1. RÉPONSES SYNTHÉTIQUES AUX QUESTIONS DE DISCUSSION
+--------------------------------------------------------------------------------
+• Traitement qui améliore le plus la lisibilité :
+  - CLAHE (Égalisation adaptative locale) : C'est la méthode la plus efficace car
+    elle réhausse le contraste zone par zone, rendant les lésions visibles tout en
+    évitant la surexposition.
+
+• Filtre qui préserve le mieux les structures fines :
+  - Le filtre médian : Il supprime le bruit impulsionnel (sel et poivre) sans flouter
+    les contours nets des microcalcifications. Le filtre gaussien est également
+    performant pour lisser le bruit tout en préservant mieux les détails que le filtre
+    moyenneur.
+
+• Limites observées sur les images très bruitées :
+  - Si on applique un rehaussement de contraste (égalisation globale ou Laplacien)
+    directement sur une image non filtrée, le bruit d'acquisition est fortement amplifié,
+    ce qui crée de fausses détections d'anomalies.
+
+--------------------------------------------------------------------------------
+2. PIPELINE OPTIMAL RECOMMANDÉ POUR LA DÉTECTION D'ANOMALIES
+--------------------------------------------------------------------------------
+1. Filtrage Médian (3x3) :
+   Suppression du bruit impulsionnel tout en préservant la netteté des microcalcifications.
+
+2. Rehaussement CLAHE (clipLimit=2.0, tileGridSize=(8,8)) :
+   Accentuation du contraste local pour faire ressortir les masses denses cachées dans
+   le tissu mammaire.
+
+3. Détection de contours (Sobel) :
+   Extraction de la magnitude du gradient pour délimiter la forme géométrique des
+   zones suspectes.
+
+4. Binarisation et Ouverture morphologique :
+   Isolation de l'anomalie (fond noir / masse blanche) et élimination des petits
+   artefacts résiduels.
+
+5. Évaluation (MSE / PSNR) :
+   Validation quantitative de la qualité du prétraitement avant la phase de classification.
+================================================================================
+"""
