@@ -197,7 +197,6 @@ filter guassian:
 """
 
 #partie 4: binarisation de l'image
-
 def binarize_image(img, threshold):
     """Binarisation de l'image selon un seuil donné."""
     binary = np.where(img >= threshold, 255, 0).astype(np.uint8)
@@ -275,7 +274,21 @@ def laplacian_filter(img):
     return np.clip(np.abs(lap), 0, 255).astype(np.uint8)
 
 
-#partie 6 : 
+#partie 6 : evaluation quantative
+def mse(img1, img2):
+    """Calcule l'Erreur Quadratique Moyenne (Mean Squared Error)."""
+    return np.mean((img1.astype(np.float64) - img2.astype(np.float64)) ** 2)
+
+
+def psnr(img1, img2):
+    """Calcule le Rapport Signal sur Bruit de Crête (Peak Signal-to-Noise Ratio)."""
+    err = mse(img1, img2)
+    if err == 0:
+        return float("inf")
+    return 10.0 * np.log10((255.0**2) / err)
+
+
+#partie 7: egalisation captive local
 
 
 
@@ -331,8 +344,11 @@ laplacian_img = laplacian_filter(equalized_img)
 analyze_histogram(laplacian_img, title="Image après Filtrage Laplacien")
 
 
+
 #partie 6 results: 
+mse_value = mse(img, equalized_img)
+psnr_value = psnr(img, equalized_img)
 
 
 
-
+#partie 7 results:
