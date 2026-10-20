@@ -250,7 +250,32 @@ def closing(img, kernel):
     """Fermeture morphologique (Dilatation puis Érosion)."""
     return erosion(dilation(img, kernel), kernel)
 
-#partie 5:
+
+
+#partie 5: Détection de bords et rehaussement
+def sobel_edges(img):
+    """Détection de contours par filtre de Sobel (Magnitude du gradient)."""
+    # Calcul des gradients horizontal (dx) et vertical (dy)
+    sobel_x = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
+
+    # Calcul de la magnitude du gradient : sqrt(Gx^2 + Gy^2)
+    magnitude = np.sqrt(sobel_x**2 + sobel_y**2)
+
+    # Normalisation sur l'intervalle [0, 255]
+    return np.clip(magnitude, 0, 255).astype(np.uint8)
+
+
+def laplacian_filter(img):
+    """Filtrage laplacien pour accentuer les variations locales de contraste."""
+    # Application du filtre Laplacien (dérivée seconde)[cite: 1]
+    lap = cv2.Laplacian(img, cv2.CV_64F)
+
+    # Valeur absolue et normalisation[cite: 1]
+    return np.clip(np.abs(lap), 0, 255).astype(np.uint8)
+
+
+#partie 6 : 
 
 
 
@@ -300,7 +325,13 @@ analyze_histogram(closed_img, title="Image après Fermeture")
 
 
 #partie5 results:
+sobel_img = sobel_edges(equalized_img)
+analyze_histogram(sobel_img, title="Image après Détection de Contours (Sobel)")
+laplacian_img = laplacian_filter(equalized_img)
+analyze_histogram(laplacian_img, title="Image après Filtrage Laplacien")
 
+
+#partie 6 results: 
 
 
 
